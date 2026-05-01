@@ -69,3 +69,49 @@ async def generate_single_thumbnail(thumbnail_id: str, prompt: str, headshot_url
             thumb.error_message = str(e)[:500]
             session.add(thumb)
             session.commit()
+            
+            
+async def process_job(job_id: str):
+    # mark job as processing
+    # find all thumbnails for this job
+    # start one worker for each thumbnail
+    # wait for all workers to finish
+    # mark job as completed/failed
+    
+    with Session(engine) as session:
+        job = session.get(Job, job_id)
+        job.status = "processing"
+        prompt = job.prompt
+        headshot_url = job.headshot_url
+        session.add(job)
+        session.commit()
+        
+        thumbnails = await session.exec(
+            select(Thumbnail).where(Thumbnail.job_id == job_id)
+        ).all()
+        
+        thumbnails_ids = [t.id for t in thumbnails]
+        
+        tasks = [
+            generate_single_thumbnail(tid, prompt, headshot_url)
+            for tid in thumbnails_ids                
+        ]
+        
+        await asyncio.gather(*tasks, return_exceptions=True)
+        
+        with Session(engine) as session:
+          thumbnails = await session.exec(
+            select(Thumbnail).where(Thumbnail.job_id == job_id)
+            ).all()
+          all_failed = all(t.status == "failed" for t in thumbnails)
+          
+          job = session.get(Job, job_id)
+          job.status = "failed" if all_failed else "completed"
+          session.add(job)
+          session.commit()
+          
+          
+          
+        
+        
+    
