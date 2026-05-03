@@ -86,7 +86,7 @@ async def process_job(job_id: str):
         session.add(job)
         session.commit()
         
-        thumbnails = await session.exec(
+        thumbnails = session.exec(
             select(Thumbnail).where(Thumbnail.job_id == job_id)
         ).all()
         
@@ -100,7 +100,7 @@ async def process_job(job_id: str):
         await asyncio.gather(*tasks, return_exceptions=True)
         
         with Session(engine) as session:
-          thumbnails = await session.exec(
+          thumbnails =  session.exec(
             select(Thumbnail).where(Thumbnail.job_id == job_id)
             ).all()
           all_failed = all(t.status == "failed" for t in thumbnails)

@@ -31,7 +31,7 @@ class CreateJobResponse(BaseModel):
     job_id: str
     
 class ThumbnailResponse(BaseModel):
-    id: int
+    id: str
     style_name: str
     status: str
     imagekit_url: str | None = None
@@ -39,7 +39,7 @@ class ThumbnailResponse(BaseModel):
     variants: dict | None = None
   
 class JobResponse(BaseModel):
-    id: int
+    id: str
     prompt: str
     num_thumbnails: int
     headshot_url: str
@@ -51,9 +51,9 @@ async def upload_headshot(file: UploadFile = File(...)):
     
     contents = await file.read()
     
-    url = await upload_file(
+    url = upload_file(
         file_bytes=contents,
-        original_filename=file.filename or "headshot.jpg",
+        file_name=file.filename or "headshot.jpg",
         folder="headshots",
         content_type=file.content_type or "image/jpeg",
     )
@@ -90,8 +90,8 @@ async def create_job(request: CreateJobRequest, session: Session = Depends(get_s
 
     
     
-@router.get("/jobs/{job_id}", response_description=JobResponse)
-async def get_job(job_id: int, session: Session = Depends(get_session)):
+@router.get("/jobs/{job_id}", response_model=JobResponse)
+async def get_job(job_id: str, session: Session = Depends(get_session)):
     job = session.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -167,7 +167,7 @@ async def stream_job(job_id: str):
                     })
                     yield f"event: job_completed\ndata: {data}\n\n"
                     return
-            await asyncio.sleep(1.5)
+            asyncio.sleep(1.5)
                 
                         
                 

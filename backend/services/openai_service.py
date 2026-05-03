@@ -23,25 +23,26 @@ async def generate_thumbnail(prompt: str, style_prompt: str, headshot_url: str) 
     
 
     response = await client.responses.create(
-    model="gpt-4o",
-    input=[
+        model="gpt-5-mini-2025-08-07",
+        input=[
         {
-        "role":"user",
-        "content": [
-            {"type": "input_image", "url": headshot_url},
-            {"type": "text", "text": full_prompt}
+            "role": "user",
+            "content": [
+                {"type": "input_image", "image_url": headshot_url},
+                {"type": "input_text", "text": full_prompt}
             ]
-        }],
-    tools=[
-        {
-        "type": "image_genration", 
-        "model": "gpt-image-2",
-        "size": "1536x1024",
-        "quality": "standard", 
-        "output_format": "png"
         }
-        ],
-    )
+    ],
+        tools=[
+        {
+            "type": "image_generation",
+            "model": "gpt-image-2",
+            "size": "1536x1024",
+            "quality": "low",
+            "output_format": "png"
+        }
+    ],
+)
 
 
     for item in response.output:
