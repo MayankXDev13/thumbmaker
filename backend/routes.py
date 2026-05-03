@@ -121,6 +121,9 @@ async def get_job(job_id: int, session: Session = Depends(get_session)):
             status=job.status,
             thumbnails=thumb_response,
         )
+        
+        
+        
 @router.get("/jobs/{job_id}/stream")
 async def stream_job(job_id: str):
     def event_generator():
@@ -162,7 +165,7 @@ async def stream_job(job_id: str):
                         "job_id": job.id,
                         "status": job.status,
                     })
-                    yield f"event: job_complete\ndata: {data}\n\n"
+                    yield f"event: job_completed\ndata: {data}\n\n"
                     return
             await asyncio.sleep(1.5)
                 
