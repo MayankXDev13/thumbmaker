@@ -16,13 +16,23 @@ export async function uploadHeadshot(file: File) {
     return res.data;
   } catch (err) {
     if (err instanceof axios.AxiosError && err.response) {
-      throw new Error(err.response.data?.message || "Upload failed", { cause: err });
+      throw new Error(err.response.data?.message || "Upload failed", {
+        cause: err,
+      });
     }
     throw new Error("Network or server error", { cause: err });
   }
 }
 
-export async function createJob({ prompt, numThumbnails, headshotUrl }: { prompt: string; numThumbnails: number; headshotUrl: string }) {
+export async function createJob({
+  prompt,
+  numThumbnails,
+  headshotUrl,
+}: {
+  prompt: string;
+  numThumbnails: number;
+  headshotUrl: string;
+}) {
   try {
     const res = await axios.post(`${API_BASE}/job`, {
       prompt,
@@ -33,7 +43,9 @@ export async function createJob({ prompt, numThumbnails, headshotUrl }: { prompt
     return res.data;
   } catch (err) {
     if (err instanceof axios.AxiosError && err.response) {
-      throw new Error(err.response.data?.message || "Job creation failed", { cause: err });
+      throw new Error(err.response.data?.message || "Job creation failed", {
+        cause: err,
+      });
     }
     throw new Error("Network or server error", { cause: err });
   }
