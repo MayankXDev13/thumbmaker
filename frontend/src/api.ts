@@ -14,15 +14,15 @@ export async function uploadHeadshot(file: File) {
     }
 
     return res.data;
-  } catch (err: any) {
-    if (err.response) {
-      throw new Error(err.response.data?.message || "Upload failed");
+  } catch (err) {
+    if (err instanceof axios.AxiosError && err.response) {
+      throw new Error(err.response.data?.message || "Upload failed", { cause: err });
     }
-    throw new Error("Network or server error");
+    throw new Error("Network or server error", { cause: err });
   }
 }
 
-export async function createJob({ prompt, numThumbnails, headshotUrl }) {
+export async function createJob({ prompt, numThumbnails, headshotUrl }: { prompt: string; numThumbnails: number; headshotUrl: string }) {
   try {
     const res = await axios.post(`${API_BASE}/job`, {
       prompt,
@@ -31,17 +31,24 @@ export async function createJob({ prompt, numThumbnails, headshotUrl }) {
     });
 
     return res.data;
-  } catch (err: any) {
-    if (err.response) {
-      throw new Error(err.response.data?.message || "Job creation failed");
+  } catch (err) {
+    if (err instanceof axios.AxiosError && err.response) {
+      throw new Error(err.response.data?.message || "Job creation failed", { cause: err });
     }
-    throw new Error("Network or server error");
+    throw new Error("Network or server error", { cause: err });
   }
 }
 
+interface JobCallbacks {
+  onThumbnailReady: (data: { index: number; url: string }) => void;
+  onThumbnailFailed: (data: { index: number; error: string }) => void;
+  onJobComplete: (data: { status: string }) => void;
+  onError: (event: Event) => void;
+}
+
 export async function subscribeToJob(
-  jobId,
-  { onThumbnailReady, onThumbnailFailed, onJobComplete, onError },
+  jobId: string,
+  { onThumbnailReady, onThumbnailFailed, onJobComplete, onError }: JobCallbacks,
 ) {
   const es = new EventSource(`${API_BASE}/jobs/${jobId}/stream`);
 

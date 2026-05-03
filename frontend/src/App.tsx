@@ -1,122 +1,139 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from "react";
+import { ThumbnailGallery } from "./components/ThumbnailGallery";
+import type { Thumbnail } from "./components/ThumbnailGallery";
+import { UploadForm } from "./components/UploadForm";
+import type { UploadFormData } from "./components/UploadForm";
+import { uploadHeadshot, createJob, subscribeToJob } from "./api";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [thumbnails, setThumbnails] = useState<Thumbnail[]>([]);
+  const [selectedId, setSelectedId] = useState<string | undefined>();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleGenerate = async (data: UploadFormData) => {
+    setIsLoading(true);
+    setThumbnails([]);
+    setSelectedId(undefined);
+
+    try {
+      const blob = await fetch(data.headshotUrl).then((r) => r.blob());
+      const file = new File([blob], "headshot.jpg", { type: blob.type });
+      const uploadedUrl = await uploadHeadshot(file);
+
+      const job = await createJob({
+        prompt: data.prompt,
+        numThumbnails: data.numThumbnails,
+        headshotUrl: uploadedUrl,
+      });
+
+      const initialThumbnails: Thumbnail[] = Array.from(
+        { length: data.numThumbnails },
+        (_, i) => ({
+          id: `thumbnail-${i}`,
+          url: "",
+          status: "loading" as const,
+        }),
+      );
+      setThumbnails(initialThumbnails);
+
+      subscribeToJob(job.job_id, {
+        onThumbnailReady: (data: { index: number; url: string }) => {
+          setThumbnails((prev) =>
+            prev.map((t, i) =>
+              i === data.index
+                ? { ...t, url: data.url, status: "ready" as const }
+                : t,
+            ),
+          );
+        },
+        onThumbnailFailed: (data: { index: number; error: string }) => {
+          setThumbnails((prev) =>
+            prev.map((t, i) =>
+              i === data.index ? { ...t, status: "failed" as const } : t,
+            ),
+          );
+        },
+        onJobComplete: () => {
+          setIsLoading(false);
+        },
+        onError: () => {
+          setIsLoading(false);
+          setThumbnails((prev) =>
+            prev.map((t) => ({ ...t, status: "failed" as const })),
+          );
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+    <div className="min-h-screen bg-neutral-950 text-neutral-200">
+      <header className="border-b border-neutral-800">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <h1 className="text-2xl font-bold text-white">ThumbMaker</h1>
+          <p className="text-neutral-400 text-sm mt-1">
+            Generate YouTube thumbnails with AI
           </p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Upload Form */}
+          <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
+            <h2 className="text-lg font-semibold text-white mb-4">
+              Create New
+            </h2>
+            <UploadForm onSubmit={handleGenerate} isLoading={isLoading} />
+          </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          {/* Thumbnail Gallery */}
+          <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800">
+            <h2 className="text-lg font-semibold text-white mb-4">
+              Thumbnails
+              {thumbnails.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-neutral-400">
+                  ({thumbnails.filter((t) => t.status === "ready").length}/
+                  {thumbnails.length})
+                </span>
+              )}
+            </h2>
+            <ThumbnailGallery
+              thumbnails={thumbnails}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+            />
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* Selected Thumbnail */}
+        {selectedId && (
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold text-white mb-4">
+              Selected Thumbnail
+            </h2>
+            {(() => {
+              const selected = thumbnails.find((t) => t.id === selectedId);
+              if (selected?.url) {
+                return (
+                  <img
+                    src={selected.url}
+                    alt="Selected"
+                    className="max-w-md w-full rounded-lg border-2 border-rose-500"
+                  />
+                );
+              }
+              return null;
+            })()}
+          </div>
+        )}
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
