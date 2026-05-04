@@ -23,7 +23,7 @@ async def generate_thumbnail(prompt: str, style_prompt: str, headshot_url: str) 
     )
 
     response = await client.responses.create(
-        model="gpt-5-mini",
+        model="gpt-5.4-mini",
         input=[
             {
                 "role": "user",
@@ -42,12 +42,13 @@ async def generate_thumbnail(prompt: str, style_prompt: str, headshot_url: str) 
         tools=[
             {
                 "type": "image_generation",
-                "size": "1536x1024",
+                "size": "1024x1024",
                 "quality": "low",
             }
         ],
     )
 
+    print("\n", response.output, "\n")
 
     for item in response.output:
         if item.type == "image_generation_call":
