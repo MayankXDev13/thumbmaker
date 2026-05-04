@@ -3,53 +3,55 @@ from openai import AsyncOpenAI
 
 from config import OPENAI_API_KEY
 
-client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+client = AsyncOpenAI(
+    api_key=OPENAI_API_KEY,
+    base_url="https://openrouter.ai/api/v1"
+)
 
 
 async def generate_thumbnail(prompt: str, style_prompt: str, headshot_url: str) -> bytes:
     """
-    Use the Responses API with gpt-image-2 as a built-in image_genration tool
-    Pass the headsho URL directly as an input_image
-    Returns raw PNG bytes
+    Generate a thumbnail using Responses API + image_generation tool.
+    Returns raw PNG bytes.
     """
-    
 
     full_prompt = (
         f"{style_prompt}\n\n"
         f"User request: {prompt}\n\n"
-        "IMPORTANT: The genrated thumbnail MUST prominently feature the person"
-        "show in the provided reference headshot photo. Keep their likness accurate"
+        "IMPORTANT: The generated thumbnail MUST prominently feature the person "
+        "shown in the provided reference headshot photo. Keep their likeness accurate."
     )
-    
 
     response = await client.responses.create(
-        model="gpt-5-mini-2025-08-07",
+        model="gpt-5-mini",
         input=[
-        {
-            "role": "user",
-            "content": [
-                {"type": "input_image", "image_url": headshot_url},
-                {"type": "input_text", "text": full_prompt}
-            ]
-        }
-    ],
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_image",
+                        "image_url": headshot_url,
+                    },
+                    {
+                        "type": "input_text",
+                        "text": full_prompt,
+                    },
+                ],
+            }
+        ],
         tools=[
-        {
-            "type": "image_generation",
-            "model": "gpt-image-2",
-            "size": "1536x1024",
-            "quality": "low",
-            "output_format": "png"
-        }
-    ],
-)
+            {
+                "type": "image_generation",
+                "size": "1536x1024",
+                "quality": "low",
+            }
+        ],
+    )
 
 
     for item in response.output:
-        if item.type == "image_generation_call" and item.result:
-            return base64.b64decode(item.result)
-           
-    raise RuntimeError("No image generation result from in the responses")
+        if item.type == "image_generation_call":
+            if hasattr(item, "result") and item.result:
+                return base64.b64decode(item.result)
 
-    
-            
+    raise RuntimeError("No image generated in response")
